@@ -25,6 +25,7 @@ module.exports = {
     "import",
   ],
   rules: {
-    quotes: ["error", "double"],
+    "@typescript-eslint/no-var-requires": 0,
+    "quotes": ["error", "double"],
   },
 };
