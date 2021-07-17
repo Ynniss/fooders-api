@@ -2,6 +2,7 @@ const functions = require("firebase-functions");
 const cors = require("cors")({origin: true});
 import {Response} from "express";
 import * as rp from "request-promise";
+import {db} from "./config/firebase";
 
 type EntryType = {
   username: string,
@@ -16,9 +17,9 @@ type Request = {
 const login = functions.https.onRequest((req: Request, res: Response) => {
   cors(req, res, () => {
     if (!req.body.username || !req.body.password) {
+      res.setHeader("Content-Type", "application/json");
       return res.status(400).json({
         message: "Missing parameter(s)",
-        data: req.body.username,
       });
     }
 
@@ -30,22 +31,36 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
       headers: {
         "User-Agent": "Request-Promise",
         "Connection": "keep-alive",
+        "Content-Type": "application/json",
       },
       json: true, // Automatically parses the JSON string in the response
     })
         .then((data) => {
           console.log(data);
           if (data.status_verbose) {
+          // We store the user in database, or just update timestamp, if already stored
+
+            const userCollection = db.collection("users").doc(req.body.username);
+            const userEntry = {
+              id: req.body.username,
+              last_connection: Date.now(),
+            };
+
+            userCollection.set(userEntry);
+
+            res.setHeader("Content-Type", "application/json");
             return res.status(200).json({
               message: "login successful",
             });
           }
 
+          res.setHeader("Content-Type", "application/json");
           return res.status(401).json({
             message: "Login failed. Check your credentials.",
           });
         })
         .catch((err) => {
+          res.setHeader("Content-Type", "application/json");
           return res.status(500).json({
             error: err,
           });
