@@ -5,17 +5,21 @@ import {
   updateEntry,
 } from "./entryController";
 import {login} from "./sessionController";
+import {getProductInformations} from "./productController";
 
 const endpointRoot = "/fooders/api";
 const app = express();
 // app.get("/", (req, res) => res.status(200).send("Hey there!"));
-app.get(`${ endpointRoot }/ping`, (req, res) => res.status(200).send("pong"));
-app.post(`${ endpointRoot }/entries`, addEntry);
-app.get(`${ endpointRoot }/entries`, getAllEntries);
-app.patch(`${ endpointRoot }/entries/:entryId`, updateEntry);
-app.delete(`${ endpointRoot }/entries/:entryId`, deleteEntry);
+app.get(`${endpointRoot}/ping`, (req, res) => res.status(200).send("pong"));
+app.post(`${endpointRoot}/entries`, addEntry);
+app.get(`${endpointRoot}/entries`, getAllEntries);
+app.patch(`${endpointRoot}/entries/:entryId`, updateEntry);
+app.delete(`${endpointRoot}/entries/:entryId`, deleteEntry);
 
 // session controller
-app.post(`${ endpointRoot }/login`, login);
+app.post(`${endpointRoot}/login`, login);
+
+// product controller
+app.get(`${endpointRoot}/product/:barcode`, getProductInformations);
 
 exports.app = functions.https.onRequest(app);
