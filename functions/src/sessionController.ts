@@ -3,10 +3,12 @@ const cors = require("cors")({origin: true});
 import {Response} from "express";
 import * as rp from "request-promise";
 import {db} from "./config/firebase";
+import {triggerFcmNotification} from "./NotificationHelper";
 
 type EntryType = {
   username: string,
   password: string,
+  fcmToken: string,
 }
 
 type Request = {
@@ -16,7 +18,7 @@ type Request = {
 
 const login = functions.https.onRequest((req: Request, res: Response) => {
   cors(req, res, () => {
-    if (!req.body.username || !req.body.password) {
+    if (!req.body.username || !req.body.password || !req.body.fcmToken) {
       res.setHeader("Content-Type", "application/json");
       return res.status(400).json({
         message: "Missing parameter(s)",
@@ -44,6 +46,7 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
             const userEntry = {
               id: req.body.username,
               last_updated_at: Date.now(),
+              fcm_token: req.body.fcmToken,
             };
 
 
@@ -54,11 +57,12 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
               const successEntry = {
                 unlocked: [
                   "welcome",
-                  String(Date.now()),
                 ],
+                last_updated_at: Date.now(),
               };
 
               const successCollection = db.collection("success").doc(req.body.username);
+              triggerFcmNotification(req.body.fcmToken, "Bienvenue !");
               successCollection.set(successEntry);
             }
 

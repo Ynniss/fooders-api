@@ -26,6 +26,8 @@ module.exports = {
   ],
   rules: {
     "max-len": "off",
+    "valid-jsdoc": "off",
+    "require-jsdoc": "off",
     "@typescript-eslint/no-var-requires": 0,
     "quotes": ["error", "double"],
   },

@@ -6,6 +6,7 @@ import {
 } from "./entryController";
 import {login} from "./sessionController";
 import {getProductInformations} from "./productController";
+import {getUserSuccess} from "./successController";
 
 const endpointRoot = "/fooders/api";
 const app = express();
@@ -21,5 +22,9 @@ app.post(`${endpointRoot}/login`, login);
 
 // product controller
 app.get(`${endpointRoot}/product/:barcode`, getProductInformations);
+
+// success controller
+app.get(`${endpointRoot}/user/success/:username`, getUserSuccess);
+
 
 exports.app = functions.https.onRequest(app);
