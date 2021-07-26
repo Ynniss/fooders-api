@@ -35,7 +35,7 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
       },
       json: true, // Automatically parses the JSON string in the response
     })
-        .then((data) => {
+        .then(async (data) => {
           console.log(data);
           if (data.status_verbose) {
           // We store the user in database, or just update timestamp, if already stored
@@ -43,8 +43,24 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
             const userCollection = db.collection("users").doc(req.body.username);
             const userEntry = {
               id: req.body.username,
-              last_connection: Date.now(),
+              last_updated_at: Date.now(),
             };
+
+
+            const searchForUser = db.collection("users").doc(req.body.username);
+            const currentData = (await searchForUser.get()).data() || {};
+
+            if (currentData.id != req.body.username) {
+              const successEntry = {
+                unlocked: [
+                  "welcome",
+                  String(Date.now()),
+                ],
+              };
+
+              const successCollection = db.collection("success").doc(req.body.username);
+              successCollection.set(successEntry);
+            }
 
             userCollection.set(userEntry);
 
