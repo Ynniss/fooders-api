@@ -5,10 +5,60 @@ import * as rp from "request-promise";
 import {db} from "./config/firebase";
 import {triggerFcmNotification} from "./NotificationHelper";
 
+enum SuccessStatusEnum {
+  done = "Terminé",
+  todo = "Non commencée",
+  doing = "En cours"
+}
+
+const successEntries = {
+  success: [
+    {
+      slug: "welcome",
+      name: "Bienvenue sur Fooders !",
+      description: "Se connecter pour la première fois à Fooders",
+      status: SuccessStatusEnum.done,
+    },
+    {
+      slug: "barcode1",
+      name: "Aventurier du code-barre",
+      description: "Saisir manuellement un code-barre pour la première fois",
+      status: SuccessStatusEnum.todo,
+    },
+    {
+      slug: "manualbarcode1",
+      name: "C'est ta première fois, c'est ça ?",
+      description: "scanner un produit pour la première fois",
+      status: SuccessStatusEnum.todo,
+    },
+    {
+      slug: "barcode5",
+      name: "La vache, t'enchaine.",
+      description: "Scanner 5 produits",
+      status: SuccessStatusEnum.todo,
+    },
+    {
+      slug: "text",
+      name: "Innarrêtable.",
+      description: "Scanner 10 produits",
+      status: SuccessStatusEnum.todo,
+    },
+    {
+      slug: "theme",
+      name: "C'est beau, le changement.",
+      description: "Changer le thème de l'application",
+      status: SuccessStatusEnum.todo,
+    },
+  ],
+  last_updated_at: Date.now(),
+};
+
 type EntryType = {
   username: string,
   password: string,
   fcmToken: string,
+  statName: string,
+  successEventType: string
 }
 
 type Request = {
@@ -47,6 +97,9 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
               id: req.body.username,
               last_updated_at: Date.now(),
               fcm_token: req.body.fcmToken,
+              scanStat: 0,
+              textStat: 0,
+              photoStat: 0,
             };
 
 
@@ -54,16 +107,9 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
             const currentData = (await searchForUser.get()).data() || {};
 
             if (currentData.id != req.body.username) {
-              const successEntry = {
-                unlocked: [
-                  "welcome",
-                ],
-                last_updated_at: Date.now(),
-              };
-
               const successCollection = db.collection("success").doc(req.body.username);
-              triggerFcmNotification(req.body.fcmToken, "Bienvenue !");
-              successCollection.set(successEntry);
+              triggerFcmNotification(req.body.fcmToken, successEntries.success[0].name);
+              successCollection.set(successEntries);
             }
 
             userCollection.set(userEntry);
@@ -89,4 +135,63 @@ const login = functions.https.onRequest((req: Request, res: Response) => {
   });
 });
 
-export {login};
+
+const updateStat = functions.https.onRequest(async (req: Request, res: Response) => {
+  if (!req.body.statName || !req.body.username) {
+    res.setHeader("Content-Type", "application/json");
+    return res.status(400).json({
+      message: "Missing parameter",
+    });
+  }
+
+  const userStatRequest = db.collection("users").doc(req.body.username);
+  const userRetrievedEntry = (await userStatRequest.get()).data() || {};
+
+  if (req.body.statName == "scanStat") {
+    userRetrievedEntry.scanStat += 1;
+
+    if (userRetrievedEntry.scanStat == 1) {
+      const userSuccess = db.collection("success").doc(req.body.username);
+      const userSuccessData = (await userSuccess.get()).data() || {};
+
+      userSuccessData.success[2].status = SuccessStatusEnum.done;
+      userSuccessData.success[3].status = SuccessStatusEnum.doing;
+      userSuccessData.success[4].status = SuccessStatusEnum.doing;
+      userSuccess.set(userSuccessData);
+
+      triggerFcmNotification(userRetrievedEntry.fcm_token, userSuccessData.success[2].name);
+    }
+    if (userRetrievedEntry.scanStat == 5) {
+      const userSuccess = db.collection("success").doc(req.body.username);
+      const userSuccessData = (await userSuccess.get()).data() || {};
+
+      userSuccessData.success[3].status = SuccessStatusEnum.done;
+      userSuccess.set(userSuccessData);
+
+      triggerFcmNotification(userRetrievedEntry.fcm_token, userSuccessData.success[3].name);
+    }
+    if (userRetrievedEntry.scanStat == 10) {
+      const userSuccess = db.collection("success").doc(req.body.username);
+      const userSuccessData = (await userSuccess.get()).data() || {};
+
+      userSuccessData.success[4].status = SuccessStatusEnum.done;
+      userSuccess.set(userSuccessData);
+
+      triggerFcmNotification(userRetrievedEntry.fcm_token, userSuccessData.success[4].name);
+    }
+  } else if (req.body.statName == "photoStat") {
+    userRetrievedEntry.photoStat += 1;
+  } else if (req.body.statName == "textStat") {
+    userRetrievedEntry.textStat += 1;
+  }
+
+
+  userStatRequest.set(userRetrievedEntry);
+
+  return res.status(200).json({
+    message: "stat updated",
+  });
+});
+
+
+export {login, updateStat};
